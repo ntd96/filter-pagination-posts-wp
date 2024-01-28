@@ -20,20 +20,25 @@ function load_posts_by_category_verse()
             $trimmed_content = wp_trim_words($raw_content, 50, '...');
             $word_count = str_word_count(strip_tags($trimmed_content));
 ?>
-            <div class="categories-item">
-                <h3 class="title"><?php the_title(); ?></h3>
-                <p class='content-short'><?php the_content(); ?></p>
+            <div class="categories-item-verse">
                 <?php
                 if ($word_count > 48) : ?>
-                    <div class="read-more-container">
-                        <button class="read-more-btn">Xem thêm</button>
+                    <div class="categories-item-over">
+                        <h3><?php the_title(); ?></h3>
+                        <p class="content-full"><?php echo the_content() ?></p>
+                        <div class="read-more-container">
+                            <button class="read-more-btn">Xem thêm</button>
+                        </div>
                     </div>
                     <div id="custom-popup" class="custom-popup">
-                        <div class="popup-content">
-                            <span id="close-popup" class="close-popup">&times;</span>
-                            <h2>Đây là tiêu đề của Popup</h2>
-                            <p><?php echo the_content() ?></p>
-                        </div>
+                        <span id="close-popup" class="close-popup">&times;</span>
+                        <h3><?php the_title(); ?></h3>
+                        <p><?php echo the_content() ?></p>
+                    </div>
+                <?php else : ?>
+                    <div class=" categories-item_less">
+                        <h3><?php the_title(); ?></h3>
+                        <p><?php echo the_content() ?></p>
                     </div>
                 <?php endif; ?>
             </div>
