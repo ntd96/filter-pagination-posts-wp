@@ -58,3 +58,37 @@ function load_posts_by_category_verse()
 }
 add_action('wp_ajax_load_posts_by_category_verse', 'load_posts_by_category_verse');
 add_action('wp_ajax_nopriv_load_posts_by_category_verse', 'load_posts_by_category_verse');
+
+// BOOK
+function load_posts_by_category_book () {
+	// Bắt đầu session và bất cứ công việc cần thiết khác
+	// ...
+	// Xác định term_id được gửi từ Ajax
+	$term_id = isset($_POST['term_id']) ? $_POST['term_id'] : '';
+
+	// Thực hiện truy vấn để lấy danh sách bài viết tương ứng với term_id
+	// Ví dụ:
+	$args = array(
+		'post_type' => 'post',
+		'posts_per_page' => -1,
+		'cat' => $term_id // Sử dụng term_id để lấy bài viết trong danh mục tương ứng
+	);
+	$query = new WP_Query($args);
+
+	// Hiển thị danh sách bài viết
+	if ($query->have_posts()) {
+		while ($query->have_posts()) {
+			$query->the_post();
+			// Hiển thị tiêu đề hoặc nội dung bài viết tùy ý
+			the_title();
+		}
+		wp_reset_postdata();
+	} else {
+		echo 'Không có bài viết nào.';
+	}
+	// Kết thúc session hoặc công việc khác nếu cần
+	// ...
+	wp_die(); // Kết thúc kịch bản Ajax
+}
+add_action('wp_ajax_load_posts_by_category_book', 'load_posts_by_category_book');
+add_action('wp_ajax_nopriv_load_posts_by_category_book', 'load_posts_by_category_book');
