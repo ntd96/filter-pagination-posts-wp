@@ -43,7 +43,7 @@ function load_posts_by_category_verse()
                 <?php endif; ?>
             </div>
 
-<?php endwhile;
+        <?php endwhile;
         wp_reset_postdata();
         $posts_html = ob_get_clean();
         $total_pages = $query->max_num_pages;
@@ -60,35 +60,73 @@ add_action('wp_ajax_load_posts_by_category_verse', 'load_posts_by_category_verse
 add_action('wp_ajax_nopriv_load_posts_by_category_verse', 'load_posts_by_category_verse');
 
 // BOOK
-function load_posts_by_category_book () {
-	// Bắt đầu session và bất cứ công việc cần thiết khác
-	// ...
-	// Xác định term_id được gửi từ Ajax
-	$term_id = isset($_POST['term_id']) ? $_POST['term_id'] : '';
-
-	// Thực hiện truy vấn để lấy danh sách bài viết tương ứng với term_id
-	// Ví dụ:
-	$args = array(
-		'post_type' => 'post',
-		'posts_per_page' => -1,
-		'cat' => $term_id // Sử dụng term_id để lấy bài viết trong danh mục tương ứng
-	);
-	$query = new WP_Query($args);
-
-	// Hiển thị danh sách bài viết
-	if ($query->have_posts()) {
-		while ($query->have_posts()) {
-			$query->the_post();
-			// Hiển thị tiêu đề hoặc nội dung bài viết tùy ý
-			the_title();
-		}
-		wp_reset_postdata();
-	} else {
-		echo 'Không có bài viết nào.';
-	}
-	// Kết thúc session hoặc công việc khác nếu cần
-	// ...
-	wp_die(); // Kết thúc kịch bản Ajax
+function debug_to_console($data, $context = 'Debug in Console')
+{
+    ob_start();
+    $output  = 'console.info(\'' . $context . ':\');';
+    $output .= 'console.log(' . json_encode($data) . ');';
+    $output  = sprintf('<script>%s</script>', $output);
+    echo $output;
+}
+function load_posts_by_category_book()
+{
+    // Bắt đầu session và bất cứ công việc cần thiết khác
+    // ...
+    // Xác định term_id được gửi từ Ajax
+    $term_id = isset($_POST['term_id']) ? $_POST['term_id'] : '';
+    $page = isset($_POST['page']) ? $_POST['page'] : 1;
+    // Thực hiện truy vấn để lấy danh sách bài viết tương ứng với term_id
+    // Ví dụ:
+    $args = array(
+        'post_type' => 'post',
+        'posts_per_page' => 2,
+        'cat' => $term_id,
+        'paged' => $page,
+        'orderby' => 'date',
+        'order' => 'DESC',
+    );
+    $query = new WP_Query($args);
+    // Hiển thị danh sách bài viết
+    if ($query->have_posts()) {
+        ob_start();
+        while ($query->have_posts()) {
+            $query->the_post();
+            $excerpt = get_the_excerpt();
+            $excerpt = wp_trim_words($excerpt, 20);
+            $parent_category_name = get_category($term_id);;
+        ?>
+            <div class="item-book">
+                <div class="col-1">
+                    <div class="thumbnail">
+                        <?php the_post_thumbnail('medium'); // Hiển thị hình ảnh thumbnail với kích thước medium 
+                        ?>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="content">
+                        <h2 class="parent_title"> <?php echo $parent_category_name->name; ?> </h2>
+                        <h3 class="title"><?php the_title(); ?></h3>
+                        <p class="excerpt"><?php echo $excerpt; ?></p>
+                        <a href="<?php the_permalink(); ?>" class="read-more-button">Xem thêm</a>
+                    </div>
+                </div>
+            </div>
+            <div id="pagination-container-book"></div>
+<?php
+        }
+        wp_reset_postdata();
+        $posts_html = ob_get_clean();
+        $total_pages = $query->max_num_pages;
+        wp_send_json(array(
+            'posts_html'  => $posts_html,
+            'total_pages' => $total_pages,
+        ));
+    } else {
+        echo 'Không có bài viết nào.';
+    }
+    // Kết thúc session hoặc công việc khác nếu cần
+    // ...
+    wp_die(); // Kết thúc kịch bản Ajax
 }
 add_action('wp_ajax_load_posts_by_category_book', 'load_posts_by_category_book');
 add_action('wp_ajax_nopriv_load_posts_by_category_book', 'load_posts_by_category_book');

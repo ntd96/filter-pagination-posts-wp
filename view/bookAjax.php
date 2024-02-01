@@ -1,12 +1,5 @@
 <?php
-function debug_to_console($data, $context = 'Debug in Console')
-{
-	ob_start();
-	$output  = 'console.info(\'' . $context . ':\');';
-	$output .= 'console.log(' . json_encode($data) . ');';
-	$output  = sprintf('<script>%s</script>', $output);
-	echo $output;
-}
+
 //Lấy thằng cha book
 $subcategories = get_categories(array(
 	'child_of' => 29,
@@ -42,9 +35,15 @@ $subcategories = get_categories(array(
 		<?php endforeach; ?>
 	</div>
 	<div class="filtered-posts-book">
+
 	</div>
+
 	<div id="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
 </div>
+<!-- <div id="pagination-container"></div> -->
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/paginationjs/2.6.0/pagination.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paginationjs/2.6.0/pagination.min.js"></script>
 
 <script src="https://kit.fontawesome.com/9a811ce03d.js" crossorigin="anonymous"></script>
 <script>
@@ -54,25 +53,56 @@ $subcategories = get_categories(array(
 		function activeFirstBook() {
 			let firstItem = $('.sidebar-book .title:first').data('id');
 			$('.sidebar-book .title:first').addClass('active').next('.list').slideDown(200);
-			loadPostsBook(firstItem);
+			loadPostsBook(firstItem, 1);
 		}
 		activeFirstBook();
 
-		function loadPostsBook(term_id) {
-			$('#loading-spinner').show();
+		function loadPostsBook(term_id, page) {
+			loadingSpiner.show();
 			$.ajax({
 				url: '<?php echo admin_url('admin-ajax.php'); ?>',
 				type: 'post',
 				data: {
 					action: 'load_posts_by_category_book',
-					term_id: term_id
+					term_id: term_id,
+					page: page
 				},
 				success: function(res) {
-					resultPostsBook(res);
+					resultPostsBook(res.posts_html);
+					initPaginationBook(res.total_pages, term_id, page)
+
+					if (window.innerWidth < 768) {
+						// Xác định vị trí của sidebar-book .title
+						var titlePosition = $('.sidebar-book .title').offset().top;
+						// Cuộn trang lên đến vị trí của sidebar-book .title
+						$('html, body').animate({
+							scrollTop: titlePosition
+						}, 1000); // Thời gian cuộn, đơn vị là mili giây
+					}
 				},
 				complete: function() {
 					// Ẩn spinner khi dữ liệu đã được load xong
 					$('#loading-spinner').hide();
+				}
+			});
+		}
+
+		function initPaginationBook(totalPages, term_id, currentPage) {
+			let pageNumbers = [];
+			// Sử dụng vòng lặp để thêm số từ 1 đến totalPages vào mảng
+			for (let i = 1; i <= totalPages; i++) {
+				pageNumbers.push(i);
+			}
+			paginationInstance = $('#pagination-container-book').pagination({
+				dataSource: pageNumbers,
+				pageSize: 1,
+				pageNumber: currentPage, // Thiết lập trang hiện tại
+				callback: function(data, pagination) {
+					let newPage = pagination.pageNumber;
+					if (newPage !== currentPage) {
+						loadingSpiner.show();
+						loadPostsBook(term_id, newPage);
+					}
 				}
 			});
 		}
@@ -95,11 +125,10 @@ $subcategories = get_categories(array(
 			// Active Icon
 			$(this).siblings('.title').find('.fa-angle-down').removeClass('active');
 			$(this).find('.fa-angle-down').toggleClass('active');
-			loadPostsBook(term_id);
+			loadPostsBook(term_id, 1);
 		}
-
-
 		$('.sidebar-book .title').click(toggleList);
+
 	});
 </script>
 
@@ -108,11 +137,15 @@ $subcategories = get_categories(array(
 	.categories-book {
 		display: flex;
 		align-items: center;
+		gap: 20px;
 	}
 
 	.sidebar-book {
 		max-width: 300px;
 		width: 100%;
+		padding: 50px 25px;
+		background-color: #db952a57;
+		border-radius: 0 40px 0 0;
 	}
 
 	.sidebar-book .title {
@@ -127,7 +160,11 @@ $subcategories = get_categories(array(
 
 	.sidebar-book .list a {
 		text-decoration: none;
-		font-size: 18px
+		font-size: 16px;
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
 	}
 
 	.sidebar-book .fa-angle-down {
@@ -141,13 +178,15 @@ $subcategories = get_categories(array(
 	}
 
 	.filtered-posts-book {
-		width: calc(100% - 300px);
+		width: calc(100% - 320px);
 		position: relative;
-		display: flex
+		display: flex;
+		flex-wrap: wrap;
 	}
 
 	.filtered-posts-book .item-book {
 		display: flex;
+		flex-wrap: wrap;
 		width: calc(100% / 2);
 		opacity: 0;
 		transition: opacity 0.3s ease;
@@ -155,14 +194,38 @@ $subcategories = get_categories(array(
 
 	.filtered-posts-book .item-book .content {
 		padding: 0 15px;
+		max-height: 250px;
+		display: grid;
+		height: 250px;
+		align-items: center;
+	}
+
+	.filtered-posts-book .item-book .content .parent_title {
+		font-size: 18px;
+		font-weight: 600;
+		color: #D88A12;
+		font-style: italic;
 	}
 
 	.filtered-posts-book .item-book .content .title {
 		font-size: 22px;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		color: #D88A12;
+		font-family: 'Raleway';
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
 	}
 
 	.filtered-posts-book .item-book .content .excerpt {
 		font-size: 18px;
+	}
+
+	.filtered-posts-book .item-book img {
+		border-radius: 5px;
+		box-shadow: rgba(255, 255, 255, 0.1) 0px 1px 1px 0px inset, rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
 	}
 
 	.filtered-posts-book .item-book .col-1 {
@@ -171,6 +234,17 @@ $subcategories = get_categories(array(
 
 	.filtered-posts-book .item-book .col-2 {
 		width: 60%;
+	}
+
+	#pagination-container-book {
+		position: absolute;
+		bottom: -60px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+
+	.paginationjs {
+		justify-content: center;
 	}
 
 	#loading-spinner {
@@ -182,4 +256,66 @@ $subcategories = get_categories(array(
 		z-index: 9999;
 		font-size: 2em;
 	}
-</style>
+
+	@media screen and (max-width: 1200px) {
+		.filtered-posts-book .item-book {
+			width: 100%;
+		}
+	}
+
+	@media screen and (max-width: 992px) {
+		.filtered-posts-book .item-book .content {
+			align-content: center;
+		}
+	}
+
+	@media screen and (max-width: 768px) {
+		.categories-book {
+			flex-wrap: wrap;
+		}
+
+		.sidebar-book {
+			max-width: 100%;
+			width: 100%;
+			border-radius: 0;
+			padding: 15px 25px;
+			display: flex;
+			justify-content: space-evenly;
+			align-items: center;
+			white-space: nowrap;
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.sidebar-book .list,
+		.sidebar-book .fa-angle-down {
+			display: none !important;
+		}
+
+		.sidebar-book .title {
+			margin: 0
+		}
+
+		.filtered-posts-book {
+			width: 100%;
+		}
+
+		.filtered-posts-book .item-book {
+			margin-bottom: 25px;
+		}
+
+		.filtered-posts-book .item-book .col-1,
+		.filtered-posts-book .item-book .col-2 {
+			width: 100%;
+		}
+
+		.filtered-posts-book .item-book .col-1 {
+			text-align: center;
+		}
+
+		::-webkit-scrollbar {
+			display: none;
+		}
+	}
+
+	</style
